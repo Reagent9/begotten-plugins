@@ -3,32 +3,36 @@ User Commands:
     /ClanCreate
         Description: Creates a clan.
         Usage: /ClanCreate <clan name>
-        Example: /ClanCreate ExampleClan
+        Example: /ClanCreate Clan
 
     /ClanInvite
         Description: Add a player you're looking at to your clan.
         Usage: /ClanInvite
-        Example: /ClanInvite
 
     /ClanCheckInv
         Description: Check if you've been invited to a clan.
         Usage: /ClanCheckInv
-        Example: /ClanCheckInv
 
     /ClanLeave
         Description: Leave your active clan. If you're the last person, it is disbanded.
         Usage: /ClanLeave
-        Example: /ClanLeave
 
     /ClanDetails
         Description: Print all clan details.
         Usage: /ClanDetails
-        Example: /ClanDetails
 
     /ClanKick
         Description: Kick a player from your clan.
         Usage: /ClanKick <player name>
-        Example: /ClanKick ExamplePlayer
+        Example: /ClanKick Player
+
+    /ClanAcceptInvite
+        Description: Accept a clan invitation.
+        Usage: /ClanAcceptInvite
+
+    /ClanHide
+        Description: Toggle if your clan affiliation should be hidden to non-clan members.
+        Usage: /ClanHide
 
 Admin Commands:
 
