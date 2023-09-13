@@ -60,14 +60,23 @@ COMMAND.text = "<clan name>"
 COMMAND.flags = CMD_DEFAULT
 COMMAND.arguments = 1
 
+-- Define the maximum allowed clan name length
+local MAX_CLAN_NAME_LENGTH = 32
+
 function COMMAND:OnRun(player, arguments)
     local clanName = arguments[1] or "Unnamed Clan"
     local playerSubFac = player:GetSubfaction()
 
+    -- Check if the clan name exceeds the maximum length
+    if string.len(clanName) > MAX_CLAN_NAME_LENGTH then
+        Schema:EasyText(player, "red", "Clan name exceeds the maximum length of " .. MAX_CLAN_NAME_LENGTH .. " characters.")
+        return
+    end
+
     if playerSubFac ~= "N/A" then
-        Schema:EasyText(player, "red", "You already belong to a clan! Leave it first." .. playerSubFac);
+        Schema:EasyText(player, "red", "You already belong to a clan! Leave it first: " .. playerSubFac);
     elseif player:GetFaction() ~= "Wanderer" then
-        Schema:EasyText(player, "red", "Only wanderers can create factions!");
+        Schema:EasyText(player, "red", "Only wanderers can create clans!");
     else
         ClanNameExists(clanName, function(exists)
             if exists then
@@ -97,7 +106,7 @@ function COMMAND:OnRun(player, arguments)
                 queryObj:Callback(callback)
                 queryObj:Execute()
 
-                -- Add the clan to the charcter's character table
+                -- Add the clan to the character's character table
                 local charactersTable = config.Get("mysql_characters_table"):Get() 
                 local updateQuery = Clockwork.database:Update(charactersTable)
                 updateQuery:Update("_ClanName", clanName)
@@ -108,6 +117,7 @@ function COMMAND:OnRun(player, arguments)
     end
 end
 COMMAND:Register()
+
 
 
 -- Invite a player to a clan
@@ -503,29 +513,22 @@ function COMMAND:OnRun(player, arguments)
     queryObj:Callback(function(result)
         if result and #result > 0 then
             local clanData = result[1]
-            local players = _player.GetAll();
+            local players = _player.GetAll()
             local characters = util.JSONToTable(clanData._Characters) or {}
 
-            -- Iterate through characters and remove clan affiliation
-            local charactersTable = config.Get("mysql_characters_table"):Get()
-
-            for i, name in ipairs(characters) do
-                for _, targetPlayer in pairs(players) do
-                    if targetPlayer:Name() == name then
-                        local characterData = targetPlayer:GetSubfaction()
-
-                        -- Check if player belongs to the clan
-                        if characterData == clanName then
-                            -- Remove clan affiliation
-                            targetPlayer:SetCharacterData("Subfaction", "N/A", true)
-                            targetPlayer:SetSharedVar("subfaction", "N/A")
-                            -- Update the _ClanName column to ""
-                            local updateCharacterQuery = Clockwork.database:Update(charactersTable)
-                            updateCharacterQuery:Update("_ClanName", "N/A")
-                            updateCharacterQuery:Where("_Name", name)
-                            updateCharacterQuery:Execute()
-                        end
-                    end
+            -- Iterate through online players and remove clan affiliation
+            for _, targetPlayer in pairs(players) do
+                print(targetPlayer:GetSubfaction() .. "\n")
+                if targetPlayer:GetSubfaction() == clanName then
+                    -- Remove clan affiliation
+                    targetPlayer:SetCharacterData("Subfaction", "N/A", true)
+                    targetPlayer:SetSharedVar("subfaction", "N/A")
+                    -- Update the _ClanName column to ""
+                    local charactersTable = config.Get("mysql_characters_table"):Get()
+                    local updateCharacterQuery = Clockwork.database:Update(charactersTable)
+                    updateCharacterQuery:Update("_ClanName", "N/A")
+                    updateCharacterQuery:Where("_Name", targetPlayer:Name())
+                    updateCharacterQuery:Execute()
                 end
             end
 
@@ -533,6 +536,25 @@ function COMMAND:OnRun(player, arguments)
             local deleteQuery = Clockwork.database:Delete(clansTable)
             deleteQuery:Where("_Name", clanName)
             deleteQuery:Callback(function()
+                -- After removing online players, query the database for offline characters
+                local offlineCharacterQuery = Clockwork.database:Select(charactersTable)
+                offlineCharacterQuery:Where("_ClanName", clanName)
+                offlineCharacterQuery:Callback(function(offlineCharacterResult)
+                    if offlineCharacterResult and #offlineCharacterResult > 0 then
+                        for _, offlineCharacterData in pairs(offlineCharacterResult) do
+                            local characterName = offlineCharacterData._Name
+                            local characterClan = offlineCharacterData._Clan
+                            if characterClan == clanName then
+                                local updateOfflineCharacterQuery = Clockwork.database:Update(charactersTable)
+                                updateOfflineCharacterQuery:Update("_ClanName", "N/A")
+                                updateOfflineCharacterQuery:Where("_Name", characterName)
+                                updateOfflineCharacterQuery:Execute()
+                            end
+                        end
+                    end
+                end)
+                offlineCharacterQuery:Execute()
+
                 Schema:EasyText(player, "green", "The clan '" .. clanName .. "' has been deleted, and its members have been removed.")
             end)
             deleteQuery:Execute()
@@ -543,6 +565,8 @@ function COMMAND:OnRun(player, arguments)
     queryObj:Execute()
 end
 COMMAND:Register()
+
+
 
 -- Clear a player's ClanInvitation
 local COMMAND = Clockwork.command:New("ClanDevClearInv");
