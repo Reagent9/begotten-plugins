@@ -254,18 +254,12 @@ function COMMAND:OnRun(player, arguments)
         if result and #result > 0 then
             local clanData = result[1]
             local characters = util.JSONToTable(clanData._Characters) or {}
-            local enemies = util.JSONToTable(clanData._Enemies) or {}
-            local allies = util.JSONToTable(clanData._Allies) or {}
 
             local charList = table.concat(characters, ", ")
-            local enemyList = table.concat(enemies, ", ")
-            local allyList = table.concat(allies, ", ")
 
             local message = "Clan Details:\n"
             message = message .. "Name: clanName\n"
             message = message .. "Characters: [" .. charList .. "]\n"
-            message = message .. "Enemies: [" .. enemyList .. "]\n"
-            message = message .. "Allies: [" .. allyList .. "]"
 
             Schema:EasyText(player, "green", message)
         else
@@ -438,7 +432,7 @@ end
 
 COMMAND:Register();
 
--- List all players in a clan
+-- List all players in a specific clan
 local COMMAND = Clockwork.command:New("ListClan");
 COMMAND.tip = "Lists all players in a specific clan.";
 COMMAND.text = "<clan name>";
@@ -551,15 +545,7 @@ function COMMAND:OnRun(player, arguments)
     end)
     queryObj:Execute()
 end
-
 COMMAND:Register()
-
--- Delete a clan, delete SQL clan entry AND remove all players from the clan.
-local COMMAND = Clockwork.command:New("ClanDevRemove")
-COMMAND.tip = "Delete a clan given its name"
-COMMAND.text = "<clan name>"
-COMMAND.access = "a"
-COMMAND.arguments = 1
 
 -- Delete a clan, delete SQL clan entry AND remove all players from the clan.
 local COMMAND = Clockwork.command:New("ClanDevRemove")
@@ -657,5 +643,4 @@ function COMMAND:OnRun(player, arguments)
     local h = target:GetSharedVar("ClanInvitation");
     Schema:EasyText(player, "green", "Cleared ClanInvitation for " .. target:Name() .. ".\n");
 end;
-
 COMMAND:Register();
