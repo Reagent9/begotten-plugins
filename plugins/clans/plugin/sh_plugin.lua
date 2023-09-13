@@ -407,6 +407,67 @@ function COMMAND:OnRun(player, arguments)
 end
 COMMAND:Register()
 
+-- List all clans & players on the server
+local COMMAND = Clockwork.command:New("ListClans");
+COMMAND.tip = "Lists all clans online in the server.";
+COMMAND.access = "a"; 
+COMMAND.flags = CMD_DEFAULT;
+
+function COMMAND:OnRun(player, arguments)
+    local players = _player.GetAll();
+    local clanList = {}
+    
+    for _, targetPlayer in pairs(players) do
+        local playerSubfaction = targetPlayer:GetSubfaction()
+        if playerSubfaction ~= "N/A" then
+            clanList[playerSubfaction] = clanList[playerSubfaction] or {}
+            table.insert(clanList[playerSubfaction], targetPlayer:Name())
+        end
+    end
+
+    if next(clanList) then
+        Schema:EasyText(player, "green", "Clans Online:")
+        for clanName, members in pairs(clanList) do
+            local memberList = table.concat(members, ", ")
+            Schema:EasyText(player, "green", clanName .. " (" .. #members .. " members): " .. memberList)
+        end
+    else
+        Schema:EasyText(player, "red", "No clans are online.")
+    end
+end
+
+COMMAND:Register();
+
+-- List all players in a clan
+local COMMAND = Clockwork.command:New("ListClan");
+COMMAND.tip = "Lists all players in a specific clan.";
+COMMAND.text = "<clan name>";
+COMMAND.flags = CMD_DEFAULT;
+COMMAND.access = "a"; 
+COMMAND.arguments = 1;
+
+function COMMAND:OnRun(player, arguments)
+    local clanName = arguments[1]
+    local players = _player.GetAll();
+    local memberList = {}
+
+    for _, targetPlayer in pairs(players) do
+        local playerSubfaction = targetPlayer:GetSubfaction()
+        if playerSubfaction == clanName then
+            table.insert(memberList, targetPlayer:Name())
+        end
+    end
+
+    if #memberList > 0 then
+        local members = table.concat(memberList, ", ")
+        Schema:EasyText(player, "green", "Players in Clan '" .. clanName .. "': " .. members)
+    else
+        Schema:EasyText(player, "red", "Clan '" .. clanName .. "' not found or has no members online.")
+    end
+end
+
+COMMAND:Register();
+
 
 -- DEV/DEBUG COMMANDS -- 
 -- Toggle clan visiblity for a player you're looking at
