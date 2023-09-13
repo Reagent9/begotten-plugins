@@ -1,1 +1,1 @@
-config.Add("mysql_clans_table", "clans", nil, nil, true, true, true) -- edited by reg testsw
+config.Add("mysql_clans_table", "clans", nil, nil, true, true, true) -- for clans table

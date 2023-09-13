@@ -1,6 +1,4 @@
-Clockwork.kernel:IncludePrefixed("./framework/libraries/sv_database.lua");
 Clockwork.kernel:IncludePrefixed("./framework/config/sv_config.lua");
-Clockwork.kernel:IncludePrefixed("./framework/libraries/sv_player.lua");
 Clockwork.kernel:IncludePrefixed("cl_hooks.lua");
 Clockwork.kernel:IncludePrefixed("sv_hooks.lua");
 
@@ -98,7 +96,7 @@ function COMMAND:OnRun(player, arguments)
                 Schema:EasyText(player, "green", "Clan '" .. clanName .. "' has been created by you")
 
                 -- Insert the clan into the database
-                local clansTable = config.Get("mysql_clans_table"):Get() 
+                local clansTable = config.Get("mysql_clans_table"):Get()
                 local queryObj = Clockwork.database:Insert(clansTable)
                 queryObj:Insert("_Name", clanData.Name)
                 queryObj:Insert("_Characters", util.TableToJSON(clanData.Players))
@@ -108,11 +106,20 @@ function COMMAND:OnRun(player, arguments)
                 queryObj:Execute()
 
                 -- Add the clan to the character's character table
-                local charactersTable = config.Get("mysql_characters_table"):Get() 
+                local charactersTable = config.Get("mysql_characters_table"):Get()
+                print(player:Name() .. " update\n")
                 local updateQuery = Clockwork.database:Update(charactersTable)
-                updateQuery:Update("_ClanName", clanName)
+                updateQuery:Update("_Subfaction", clanName)
                 updateQuery:Where("_Name", player:Name())
-                updateQuery:Execute()
+
+                -- Add debug print statements to check for errors
+                print("Update query: " .. tostring(updateQuery))
+                local success, errorText = updateQuery:Execute()
+                if not success then
+                    print("Error updating _Subfaction: " .. tostring(updateQuery))
+                else
+                    print("Character _Subfaction updated successfully.")
+                end
             end
         end)
     end
@@ -199,7 +206,7 @@ function COMMAND:OnRun(player, arguments)
                 if characters[1] == player:Name() then
                     -- Edit the target player's ClanName column in characters
                     local updateQuery = Clockwork.database:Update(charactersTable)
-                    updateQuery:Update("_ClanName", "N/A")
+                    updateQuery:Update("_Subfaction", "N/A")
                     updateQuery:Where("_Name", target:Name())
                     updateQuery:Execute()
 
@@ -308,7 +315,7 @@ function COMMAND:OnRun(player, arguments)
             -- Add the clan to the charcter's character table
             local charactersTable = config.Get("mysql_characters_table"):Get() 
             local updateQuery = Clockwork.database:Update(charactersTable)
-            updateQuery:Update("_ClanName", clanInvitation)
+            updateQuery:Update("_Subfaction", clanInvitation)
             updateQuery:Where("_Name", player:Name())
             updateQuery:Execute()
 
@@ -379,7 +386,13 @@ function COMMAND:OnRun(player, arguments)
                 updateQuery:Where("_Name", clanName)
                 updateQuery:Execute()
 
-                player:SetCharacterData("Subfaction", "N/A", true)
+                -- Update the character table to set _Subfaction to "N/A"
+                local charactersTable = config.Get("mysql_characters_table"):Get()
+                local characterUpdateQuery = Clockwork.database:Update(charactersTable)
+                characterUpdateQuery:Update("_Subfaction", "N/A")
+                characterUpdateQuery:Where("_Name", player:Name())
+                characterUpdateQuery:Execute()
+
                 player:SetSharedVar("subfaction", "N/A")
                 Schema:EasyText(player, "green", " You have quit the clan " .. clanName .. "'!")
 
@@ -538,6 +551,13 @@ function COMMAND:OnRun(player, arguments)
             target:SetSharedVar("subfaction", clanInvitation)
             target:SetSharedVar("ClanInvitation", "")
 
+            -- Edit the player's character table _Subfaction column
+            local charactersTable = config.Get("mysql_characters_table"):Get()
+            local characterUpdateQuery = Clockwork.database:Update(charactersTable)
+            characterUpdateQuery:Update("_Subfaction", clanInvitation)
+            characterUpdateQuery:Where("_Name", target:Name())
+            characterUpdateQuery:Execute()
+
             Schema:EasyText(player, "green", "Forced " .. target:Name() .. " to join clan '" .. clanInvitation .. "'!")
         else
             Schema:EasyText(player, "red", "Clan not found.")
@@ -546,6 +566,7 @@ function COMMAND:OnRun(player, arguments)
     queryObj:Execute()
 end
 COMMAND:Register()
+
 
 -- Delete a clan, delete SQL clan entry AND remove all players from the clan.
 local COMMAND = Clockwork.command:New("ClanDevRemove")
@@ -583,7 +604,7 @@ function COMMAND:OnRun(player, arguments)
                     targetPlayer:SetSharedVar("subfaction", "N/A")
                     local charactersTable = config.Get("mysql_characters_table"):Get()
                     local updateCharacterQuery = Clockwork.database:Update(charactersTable)
-                    updateCharacterQuery:Update("_ClanName", "N/A")
+                    updateCharacterQuery:Update("_Subfaction", "N/A")
                     updateCharacterQuery:Where("_Name", targetPlayer:Name())
                     updateCharacterQuery:Execute()
                 end
@@ -594,7 +615,7 @@ function COMMAND:OnRun(player, arguments)
             deleteQuery:Where("_Name", clanName)
             deleteQuery:Callback(function()
                 local offlineCharacterQuery = Clockwork.database:Select(charactersTable)
-                offlineCharacterQuery:Where("_ClanName", clanName)
+                offlineCharacterQuery:Where("_Subfaction", clanName)
                 offlineCharacterQuery:Callback(function(offlineCharacterResult)
                     if offlineCharacterResult and #offlineCharacterResult > 0 then
                         for _, offlineCharacterData in pairs(offlineCharacterResult) do
@@ -604,7 +625,7 @@ function COMMAND:OnRun(player, arguments)
 
                             if lowerCharacterClan == lowerClanName then
                                 local updateOfflineCharacterQuery = Clockwork.database:Update(charactersTable)
-                                updateOfflineCharacterQuery:Update("_ClanName", "N/A")
+                                updateOfflineCharacterQuery:Update("_Subfaction", "N/A")
                                 updateOfflineCharacterQuery:Where("_Name", characterName)
                                 updateOfflineCharacterQuery:Execute()
                             end
