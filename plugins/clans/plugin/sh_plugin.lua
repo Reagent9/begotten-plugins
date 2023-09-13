@@ -578,8 +578,6 @@ end
 COMMAND:Register()
 
 
-
-
 -- Clear a player's ClanInvitation
 local COMMAND = Clockwork.command:New("ClanDevClearInv");
 COMMAND.tip = "Clear a player's ClanInvitation.";

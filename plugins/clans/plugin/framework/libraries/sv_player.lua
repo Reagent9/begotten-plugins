@@ -1,4 +1,4 @@
--- Remove deleted characters from clan and drop the clan if no members are left
+-- Remove deleted characters from clan and drop the clan if no members are left, put in sv_hooks.lua later
 hook.Add("PlayerDeleteCharacter", "", function(player, character)
     local charName = character.name
     local clanName = character.subfaction
@@ -19,12 +19,11 @@ hook.Add("PlayerDeleteCharacter", "", function(player, character)
 
             -- Remove the character's name from the clan's character list.
             for i, name in ipairs(characters) do
-                if name == charName then  -- Change 'clanName' to 'charName' here
+                if name == charName then 
                     table.remove(characters, i)
                     break
                 end
             end
-
 
             local updateQuery = Clockwork.database:Update(clansTable)
             updateQuery:Update("_Characters", util.TableToJSON(characters))
