@@ -2,7 +2,7 @@
 hook.Add("PlayerCharacterLoaded", "", function(player)
     local subfactionName = player:GetSubfaction()
     local playerName = player:GetName();
-    print("@@@@@@@EEEEEE\n");
+
     local characterTable = config.Get("mysql_characters_table"):Get()
     local queryObj = Clockwork.database:Select(characterTable)
     queryObj:Where("_Name", playerName)
@@ -32,3 +32,5 @@ hook.Add("PlayerCharacterCreated", "", function(player, character)
     player:SetCharacterData("Subfaction", "N/A", true);
     player:SetSharedVar("subfaction", "N/A");
 end, HOOK_LOW)
+
+

@@ -1,5 +1,6 @@
 Clockwork.kernel:IncludePrefixed("./framework/libraries/sv_database.lua");
 Clockwork.kernel:IncludePrefixed("./framework/config/sv_config.lua");
+Clockwork.kernel:IncludePrefixed("./framework/libraries/sv_player.lua");
 Clockwork.kernel:IncludePrefixed("cl_hooks.lua");
 Clockwork.kernel:IncludePrefixed("sv_hooks.lua");
 
@@ -499,6 +500,13 @@ COMMAND.text = "<clan name>"
 COMMAND.access = "a"
 COMMAND.arguments = 1
 
+-- Delete a clan, delete SQL clan entry AND remove all players from the clan.
+local COMMAND = Clockwork.command:New("ClanDevRemove")
+COMMAND.tip = "Delete a clan given its name"
+COMMAND.text = "<clan name>"
+COMMAND.access = "a"
+COMMAND.arguments = 1
+
 function COMMAND:OnRun(player, arguments)
     local clanName = arguments[1]
 
@@ -516,14 +524,16 @@ function COMMAND:OnRun(player, arguments)
             local players = _player.GetAll()
             local characters = util.JSONToTable(clanData._Characters) or {}
 
+            local lowerClanName = string.lower(clanName)
+
             -- Iterate through online players and remove clan affiliation
             for _, targetPlayer in pairs(players) do
-                print(targetPlayer:GetSubfaction() .. "\n")
-                if targetPlayer:GetSubfaction() == clanName then
-                    -- Remove clan affiliation
+                local playerSubfaction = targetPlayer:GetSubfaction()
+                local lowerPlayerSubfaction = string.lower(playerSubfaction)
+
+                if lowerPlayerSubfaction == lowerClanName then
                     targetPlayer:SetCharacterData("Subfaction", "N/A", true)
                     targetPlayer:SetSharedVar("subfaction", "N/A")
-                    -- Update the _ClanName column to ""
                     local charactersTable = config.Get("mysql_characters_table"):Get()
                     local updateCharacterQuery = Clockwork.database:Update(charactersTable)
                     updateCharacterQuery:Update("_ClanName", "N/A")
@@ -536,7 +546,6 @@ function COMMAND:OnRun(player, arguments)
             local deleteQuery = Clockwork.database:Delete(clansTable)
             deleteQuery:Where("_Name", clanName)
             deleteQuery:Callback(function()
-                -- After removing online players, query the database for offline characters
                 local offlineCharacterQuery = Clockwork.database:Select(charactersTable)
                 offlineCharacterQuery:Where("_ClanName", clanName)
                 offlineCharacterQuery:Callback(function(offlineCharacterResult)
@@ -544,7 +553,9 @@ function COMMAND:OnRun(player, arguments)
                         for _, offlineCharacterData in pairs(offlineCharacterResult) do
                             local characterName = offlineCharacterData._Name
                             local characterClan = offlineCharacterData._Clan
-                            if characterClan == clanName then
+                            local lowerCharacterClan = string.lower(characterClan)
+
+                            if lowerCharacterClan == lowerClanName then
                                 local updateOfflineCharacterQuery = Clockwork.database:Update(charactersTable)
                                 updateOfflineCharacterQuery:Update("_ClanName", "N/A")
                                 updateOfflineCharacterQuery:Where("_Name", characterName)
@@ -565,6 +576,7 @@ function COMMAND:OnRun(player, arguments)
     queryObj:Execute()
 end
 COMMAND:Register()
+
 
 
 
