@@ -2,6 +2,7 @@
 hook.Add("PlayerCharacterLoaded", "", function(player)
     local subfactionName = player:GetSubfaction()
     local playerName = player:GetName();
+    local character = player:GetCharacter();
 
     local characterTable = config.Get("mysql_characters_table"):Get()
     local queryObj = Clockwork.database:Select(characterTable)
@@ -9,16 +10,16 @@ hook.Add("PlayerCharacterLoaded", "", function(player)
     queryObj:Callback(function(result)
         if result and #result > 0 then
             local characterTable = result[1]
-            local playerSubFac = characterTable._ClanName
+            local playerSubFac = characterTable._Subfaction
 
-            print(playerSubFac .. "\n");
-
-            if playerSubFac ~= "" then
+            if playerSubFac ~= "N/A" then
                 player:SetSharedVar("subfaction", playerSubFac);
                 player:SetCharacterData("ClanInvitation", "");
+                character.subfaction = playerSubFac;
             else
-                player:SetSharedVar("subfaction", "");
-                player:SetCharacterData("ClanInvitation", "");
+                player:SetSharedVar("subfaction", "N/A");
+                player:SetCharacterData("ClanInvitation", "N/A");
+                character.subfaction = "N/A";
             end
         end
     end)
@@ -26,9 +27,8 @@ hook.Add("PlayerCharacterLoaded", "", function(player)
 end, HOOK_LOW)
 
 
--- On character load, correct their subfaction via SQL
+-- On character load, correct their subfaction via SQL, added for debugging. REMOVE LATER
 hook.Add("PlayerCharacterCreated", "", function(player, character)
-    MsgC(Color(0, 0, 255), "[Clockwork]", Color(192, 192, 192), " New char created! WOW!\n")
     player:SetCharacterData("Subfaction", "N/A", true);
     player:SetSharedVar("subfaction", "N/A");
 end, HOOK_LOW)
@@ -37,8 +37,7 @@ end, HOOK_LOW)
 -- Hook DatabaseConnected to append a clan table to the database
 hook.Add("DatabaseConnected", "", function()
     local databaseMod = Clockwork.database.Module
-    if (databaseMod == "sqlite") then
-        -- Create clans table
+    if (databaseMod == "sqlite") then -- Create clans table
         local clansQueryObj = Clockwork.database:Create("clans")
         clansQueryObj:Create("_ID", "INTEGER AUTOINCREMENT")
         clansQueryObj:Create("_Name", "TEXT")
@@ -46,8 +45,7 @@ hook.Add("DatabaseConnected", "", function()
         clansQueryObj:PrimaryKey("_ID")
         clansQueryObj:Execute()
 
-    else
-        -- Create clans table
+    else -- Create clans table
         local clansQueryObj = Clockwork.database:Create("clans")
         clansQueryObj:Create("_ID", "int(11) NOT NULL AUTO_INCREMENT")
         clansQueryObj:Create("_Name", "varchar(150) NOT NULL")
@@ -63,8 +61,6 @@ end)
 hook.Add("PlayerDeleteCharacter", "", function(player, character)
     local charName = character.name
     local clanName = character.subfaction
-
-    print(clanName .. "\n");
 
     if clanName == "N/A" then
         return
