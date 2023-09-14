@@ -240,8 +240,8 @@ function COMMAND:OnRun(player, arguments)
 
             local charList = table.concat(characters, ", ")
 
-            local message = groupType ..  " Details:\n"
-            message = message .. "Name: clanName\n"
+            local message = firstToUpper(groupType) ..  " Details:\n"
+            message = message .. "Name: " .. clanName .. "\n"
             message = message .. "Characters: [" .. charList .. "]\n"
 
             Schema:EasyText(player, "green", message)
