@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="https://i.imgur.com/4xssqVN.png" />
+</p>
+
+
 User Commands:
 
     /ClanCreate
@@ -65,3 +70,5 @@ Admin Commands:
         Description: Clear a player's ClanInvitation.
         Usage: /ClanDevClearInv <player>
         Example: /ClanDevClearInv ExamplePlayer
+
+set groupType in sh_plugin.lua to whatever name of the group you wish to have for your server to modify commands. Ex: /ClanCreate -> /GangCreate
