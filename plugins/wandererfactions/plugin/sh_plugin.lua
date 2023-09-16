@@ -1,4 +1,3 @@
-Clockwork.kernel:IncludePrefixed("./framework/config/sv_config.lua");
 Clockwork.kernel:IncludePrefixed("cl_hooks.lua");
 Clockwork.kernel:IncludePrefixed("sv_hooks.lua");
 
@@ -6,7 +5,10 @@ if not config then
     include("sh_config.lua")
 end
 
-local groupType = "clan"; -- set this to the type of group, purely visual
+local groupType = "clan";               -- Flavor variables, edit to adjust output text
+local groupLeaderType = "Leader";
+local groupSubleaderType = "Officer";
+local groupPeonType = "Member"
 
 function firstToUpper(str)
     return (str:gsub("^%l", string.upper))
@@ -47,6 +49,7 @@ function GetClanData(Callback)
     queryObj:Execute()
 end
 
+
 -- Create a clan
 local COMMAND = Clockwork.command:New("" .. firstToUpper(groupType) .. "Create")
 COMMAND.tip = "Creates a " .. groupType .. "."
@@ -78,7 +81,7 @@ function COMMAND:OnRun(player, arguments)
             if exists then
                 Schema:EasyText(player, "red", groupType ..  " '" .. clanName .. "' already exists!")
             else     
-                player:SetCharacterData("SubfactionRank", "Officer")      
+                player:SetCharacterData("SubfactionRank", groupLeaderType)      
                 player:SetCharacterData("Subfaction", clanName)
                 player:SetSharedVar("subfaction", clanName)
                 character.subfaction  = clanName;
@@ -124,6 +127,8 @@ function COMMAND:OnRun(player, arguments)
 end;
 COMMAND:Register();
 
+
+
 -- Get current invite
 local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "CheckInv");
 COMMAND.tip = "Check if you've been invited to a " .. groupType .. ".";
@@ -140,6 +145,7 @@ end;
 COMMAND:Register();
 
 
+
 -- Remove a player from a clan
 local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "Kick")
 COMMAND.tip = "Kick a player from your " .. groupType .. "."
@@ -151,6 +157,7 @@ function COMMAND:OnRun(player, arguments)
     local target = Clockwork.player:FindByID(arguments[1])
     local targetName = target:Name()
     local clanName = player:GetSubfaction()
+    local rank = player:GetCharacterData("SubfactionRank")
 
     if not target then
         Schema:EasyText(player, "red", "Player not found/online.")
@@ -158,25 +165,28 @@ function COMMAND:OnRun(player, arguments)
         Schema:EasyText(player, "red", "You aren't in a " .. groupType .. "!")
     elseif target:GetSubfaction() ~= clanName then
         Schema:EasyText(player, "red", targetName .. " is not in your " .. groupType .. "!")
-    elseif player:GetCharacterData("SubfactionRank") ~= "Officer" then 
-        Schema:EasyText(player, "red", "You are not the officer of this " ..  groupType ..  " and cannot kick members.")
+    elseif  rank ~= groupSubleaderType and rank ~= groupLeaderType then 
+        Schema:EasyText(player, "red", "You are not the " .. groupSubleaderType .. " of this " ..  groupType ..  " and cannot kick members.")
     else
         target:SetCharacterData("Subfaction", "N/A", true)
         target:SetSharedVar("subfaction", "N/A")
         target:GetCharacter().subfaction = "N/A";
+        player:SetCharacterData("SubfactionRank", "N/A")
         Schema:EasyText(player, "green", targetName .. " removed from " ..  groupType ..  " '" .. clanName .. "'!")
     end
 end
 COMMAND:Register()
 
 
--- Print all clan details. Names of all players, enemies of clan, allies of clan
+
+-- Print all clan details. Names of all players/ranks
 local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "Details");
 COMMAND.tip = "Print all " ..  groupType ..  " details.";
 COMMAND.flags = CMD_DEFAULT;
 
 function COMMAND:OnRun(player, arguments)
     local clanName = player:GetSubfaction()
+    local playerRank = player:GetCharacterData("SubfactionRank")
 
     if not clanName or clanName == "N/A" then
         Schema:EasyText(player, "red", "You aren't in a " .. groupType .. "!")
@@ -187,13 +197,23 @@ function COMMAND:OnRun(player, arguments)
     local queryObj = Clockwork.database:Select(charactersTable)
     queryObj:Where("_Subfaction", clanName)
     queryObj:Callback(function(result)
-        local charList = {} -- Initialize the character list
+        local charList = {} 
+        local addedPlayers = {}
 
         -- Add offline players to character list
         if result and #result > 0 then
             for _, characterData in pairs(result) do
                 local characterName = characterData._Name
-                table.insert(charList, characterName)
+                local charRank = util.JSONToTable(characterData._Data).SubfactionRank
+                local displayRank = ""
+                if characterRank == groupLeaderType or characterRank == groupSubleaderType then
+                    displayRank = " (" .. util.JSONToTable(characterData._Data).SubfactionRank .. ")";
+                end
+
+                if not addedPlayers[characterName] then
+                    table.insert(charList, characterName .. displayRank )
+                    addedPlayers[characterName] = true
+                end
             end
         end
 
@@ -202,17 +222,16 @@ function COMMAND:OnRun(player, arguments)
         for _, onlinePlayer in pairs(onlinePlayers) do
             if onlinePlayer:GetSubfaction() == clanName then
                 local playerName = onlinePlayer:Name()
-                local isPlayerInList = false
+                local displayRank = ""
+                local playerRank = onlinePlayer:GetCharacterData("SubfactionRank")
 
-                for _, characterName in pairs(charList) do
-                    if characterName == playerName then
-                        isPlayerInList = true
-                        break
-                    end
+                if playerRank == groupLeaderType or playerRank == groupSubleaderType then
+                    displayRank = " (" .. playerRank .. ")"
                 end
 
-                if not isPlayerInList then
-                    table.insert(charList, playerName)
+                if not addedPlayers[playerName] then
+                    table.insert(charList, playerName .. displayRank )
+                    addedPlayers[playerName] = true
                 end
             end
         end
@@ -226,8 +245,6 @@ function COMMAND:OnRun(player, arguments)
     queryObj:Execute()
 end
 COMMAND:Register()
-
-
 
 -- Accept a clan invitation
 local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "AcceptInvite")
@@ -247,6 +264,7 @@ function COMMAND:OnRun(player, arguments)
         if exists then
             player:SetCharacterData("Subfaction", clanInvitation, true)
             player:SetSharedVar("subfaction", clanInvitation)
+            player:SetCharacterData("SubfactionRank", groupPeonType)
             player:SetSharedVar("ClanInvitation", "")
 
             Schema:EasyText(player, "green", "You have joined " ..  groupType ..  " '" .. clanInvitation .. "'!")
@@ -256,7 +274,6 @@ function COMMAND:OnRun(player, arguments)
     end)
 end
 COMMAND:Register()
-
 
 
 -- Toggle if your clan affilation should be hidden or not
@@ -293,6 +310,7 @@ function COMMAND:OnRun(player, arguments)
     else
         player:SetSharedVar("subfaction", "N/A")
         player:SetCharacterData("Subfaction", "N/A")
+        player:SetCharacterData("SubfactionRank", "N/A")
         local character = player:GetCharacter();
         character.subfaction = "N/A";
         Schema:EasyText(player, "green", " You have quit the " ..  groupType ..  " '" .. clanName .. "'!")
@@ -301,7 +319,7 @@ end
 COMMAND:Register()
 
 -- List all clans & players on the server
-local COMMAND = Clockwork.command:New("ListClans");
+local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "sList");
 COMMAND.tip = "Lists all clans online in the server.";
 COMMAND.access = "a"; 
 COMMAND.flags = CMD_DEFAULT;
@@ -312,9 +330,16 @@ function COMMAND:OnRun(player, arguments)
     
     for _, targetPlayer in pairs(players) do
         local playerSubfaction = targetPlayer:GetSubfaction()
+        local playerRank = targetPlayer:GetCharacterData("SubfactionRank")
+        local displayRank = ""
+
+        if playerRank == groupLeaderType or playerRank == groupSubleaderType then
+            displayRank = " (" .. playerRank .. ")"
+        end
+
         if playerSubfaction ~= "N/A" then
             clanList[playerSubfaction] = clanList[playerSubfaction] or {}
-            table.insert(clanList[playerSubfaction], targetPlayer:Name())
+            table.insert(clanList[playerSubfaction], targetPlayer:Name() .. displayRank)
         end
     end
 
@@ -331,8 +356,9 @@ end
 
 COMMAND:Register();
 
+
 -- List all players in a specific clan
-local COMMAND = Clockwork.command:New("ListClan");
+local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "List");
 COMMAND.tip = "Lists all players in a specific " .. groupType .. ".";
 COMMAND.text = "<clan name>";
 COMMAND.flags = CMD_DEFAULT;
@@ -346,8 +372,15 @@ function COMMAND:OnRun(player, arguments)
 
     for _, targetPlayer in pairs(players) do
         local playerSubfaction = targetPlayer:GetSubfaction()
+        local playerRank = targetPlayer:GetCharacterData("SubfactionRank")
+        local displayRank = ""
+
+        if playerRank == groupLeaderType or playerRank == groupSubleaderType then
+            displayRank = " (" .. playerRank .. ")"
+        end
+
         if playerSubfaction == clanName then
-            table.insert(memberList, targetPlayer:Name())
+            table.insert(memberList, targetPlayer:Name() .. displayRank)
         end
     end
 
@@ -360,6 +393,85 @@ function COMMAND:OnRun(player, arguments)
 end
 
 COMMAND:Register();
+
+
+-- Promote a user to an groupSubleaderType
+local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "Promote");
+COMMAND.tip = "Promote a player to " .. groupSubleaderType .. " rank.";
+COMMAND.text = "<player name>";
+COMMAND.flags = CMD_DEFAULT;
+COMMAND.arguments = 1;
+
+function COMMAND:OnRun(player, arguments)
+    local target = Clockwork.player:FindByID(arguments[1])
+    local clanName = player:GetSubfaction()
+    local playerRank = player:GetCharacterData("SubfactionRank")
+
+    if not target then
+        Schema:EasyText(player, "red", "Player not found/online.")
+        return
+    end
+    if not clanName or clanName == "N/A" then
+        Schema:EasyText(player, "red", "You aren't in a " .. groupType .. "!")
+        return
+    end
+    
+    if playerRank ~= groupLeaderType and playerRank ~= groupSubleaderType then
+        Schema:EasyText(player, "red", "You do not have permission to promote to ".. groupSubleaderType .. ".")
+        return
+    end
+    if target:GetSubfaction() ~= clanName then
+        Schema:EasyText(player, "red", target:Name() .. " is not in your " .. groupType .. "!")
+        return
+    end
+    if target:GetCharacterData("SubfactionRank") == groupSubleaderType then
+        Schema:EasyText(player, "red", target:Name() .. " is already an ".. groupSubleaderType .. ".")
+        return
+    end
+
+    target:SetCharacterData("SubfactionRank", groupSubleaderType, true)
+    Schema:EasyText(player, "green", target:Name() .. " has been promoted to ".. groupSubleaderType.. ".")
+end
+COMMAND:Register()
+
+local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "Demote");
+COMMAND.tip = "Demote a player from ".. groupSubleaderType.. " to Member rank.";
+COMMAND.text = "<player name>";
+COMMAND.flags = CMD_DEFAULT;
+COMMAND.arguments = 1;
+
+function COMMAND:OnRun(player, arguments)
+    local target = Clockwork.player:FindByID(arguments[1])
+    local clanName = player:GetSubfaction()
+    local playerRank = player:GetCharacterData("SubfactionRank")
+
+    if not target then
+        Schema:EasyText(player, "red", "Player not found/online.")
+        return
+    end
+
+    if not clanName or clanName == "N/A" then
+        Schema:EasyText(player, "red", "You aren't in a " .. groupType .. "!")
+        return
+    end
+    if playerRank ~= groupLeaderType then
+        Schema:EasyText(player, "red", "You do not have permission to demote to Member.")
+        return
+    end
+    if target:GetSubfaction() ~= clanName then
+        Schema:EasyText(player, "red", target:Name() .. " is not in your " .. groupType .. "!")
+        return
+    end
+    if target:GetCharacterData("SubfactionRank") == groupPeonType then
+        Schema:EasyText(player, "red", target:Name() .. " is already a Member.")
+        return
+    end
+
+    target:SetCharacterData("SubfactionRank", groupPeonType, true)
+    Schema:EasyText(player, "green", target:Name() .. " has been demoted to Member.")
+end
+COMMAND:Register()
+
 
 
 -- DEV/DEBUG COMMANDS -- 
@@ -393,7 +505,7 @@ COMMAND:Register()
 
 
 -- DEV Force a place you're looking at to accept a clan invite
-local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "DevAccept");
+local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "DevForceAccept");
 COMMAND.tip = "Force a player to accept their " ..  groupType ..  " invitation.";
 COMMAND.access = "a";
 
@@ -412,8 +524,9 @@ function COMMAND:OnRun(player, arguments)
         Schema:EasyText(player, "red", target:Name() .. " does not have a pending " ..  groupType ..  " invitation.")
         return
     end
-
+    
     target:SetCharacterData("Subfaction", clanInvitation, true)
+    player:SetCharacterData("SubfactionRank", groupPeonType)
     target:SetSharedVar("subfaction", clanInvitation)
     target:SetSharedVar("ClanInvitation", "")
 
@@ -503,3 +616,40 @@ function COMMAND:OnRun(player, arguments)
     Schema:EasyText(player, "green", "Cleared ClanInvitation for " .. target:Name() .. ".\n");
 end;
 COMMAND:Register();
+
+
+-- Promote yourself to a specified rank
+local COMMAND = Clockwork.command:New(firstToUpper(groupType) .. "DevPromoteSelf");
+COMMAND.tip = "Promote yourself to a specified rank in your clan.";
+COMMAND.text = "<rank>";
+COMMAND.flags = CMD_DEFAULT;
+COMMAND.arguments = 1;
+COMMAND.access = "a";
+
+
+function COMMAND:OnRun(player, arguments)
+    local clanName = player:GetSubfaction()
+    local playerRank = player:GetCharacterData("SubfactionRank")
+    local targetRank = string.lower(arguments[1]) -- Convert the target rank to lowercase for case-insensitive comparison
+
+    if clanName == "N/A" then
+        Schema:EasyText(player, "red", "You aren't in a clan!")
+        return
+    end
+
+    if playerRank ~= groupLeaderType and playerRank ~= groupSubleaderType then
+        Schema:EasyText(player, "red", "You do not have permission to promote members.")
+        return
+    end
+
+    -- Check if the target rank is valid
+    if targetRank ~= groupPeonType and targetRank ~= groupSubleaderType and targetRank ~= groupLeaderType then
+        Schema:EasyText(player, "red", "Invalid rank. Use 'member', 'officer', or 'leader'.")
+        return
+    end
+
+    -- Promote the player to the specified rank
+    player:SetCharacterData("SubfactionRank", targetRank, true)
+    Schema:EasyText(player, "green", "You have promoted yourself to " .. firstToUpper(targetRank) .. ".")
+end
+COMMAND:Register()
