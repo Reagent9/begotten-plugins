@@ -31,6 +31,16 @@ User Commands:
         Usage: /ClanKick <player name>
         Example: /ClanKick Player
 
+    /ClanPromote
+        Description: Promote a user to a subleader.
+        Usage: /ClanPromote <player name>
+        Example: /ClanPromote Player
+
+    /ClanDemote
+        Description: Demote a player one rank lower than their current rank.
+        Usage: /ClanDemote <player name>
+        Example: /ClanDemote Player
+
     /ClanAcceptInvite
         Description: Accept a clan invitation.
         Usage: /ClanAcceptInvite
@@ -41,22 +51,20 @@ User Commands:
 
 Admin Commands:
 
-    /ListClans
+    /ClansList
         Description: Lists all clans online on the server.
-        Usage: /ListClans
-        Example: /ListClans
+        Usage: /ClansList
         
-    /ListClan
+    /ClanList
         Description: Lists all players in a specific clan.
-        Usage: /ListClan <clan name>
-        Example: /ListClan ExampleClan
+        Usage: /ClanList <clan name>
+        Example: /ClanList ExampleClan
         
     /ClanDevHide
         Description: Force a player to toggle their clan affiliation visibility.
         Usage: /ClanDevHide
-        Example: /ClanDevHide
 
-    /ClanDevAccept
+    /ClanDevForceAccept
         Description: Force a player to accept their clan invitation.
         Usage: /ClanDevAccept
         Example: /ClanDevAccept
@@ -70,5 +78,10 @@ Admin Commands:
         Description: Clear a player's ClanInvitation.
         Usage: /ClanDevClearInv <player>
         Example: /ClanDevClearInv ExamplePlayer
+
+    /ClanDevPromoteSelf
+        Description: Promote yourself to a specified rank in a clan.
+        Usage: /ClanDevPromoteSelf <rank>
+        Example: /ClanDevPromoteSelf Officer
 
 set groupType in sh_plugin.lua to whatever name of the group you wish to have for your server to modify commands. Ex: /ClanCreate -> /GangCreate
