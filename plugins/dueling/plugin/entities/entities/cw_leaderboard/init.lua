@@ -5,10 +5,12 @@ util.AddNetworkString("UpdateLeaderboard")
 AddCSLuaFile("cl_init.lua");
 AddCSLuaFile("shared.lua");
 
+local cwDueling = cwDueling;
+
 
 -- Retrieves player win/lose data and constructs leaderboard data to be broadcasted to all players
 local function UpdateLeaderboard()
-    local pl = { [1] = {}, [2] = {}, [3] = {}, [4] = {}, [5] = {}, }
+    --[[local pl = { [1] = {}, [2] = {}, [3] = {}, [4] = {}, [5] = {}, }
 
     local charactersTable = Clockwork.config:Get("mysql_characters_table"):Get()
 
@@ -99,7 +101,11 @@ local function UpdateLeaderboard()
             net.Broadcast()
         end
     end)
-    query:Execute();
+    query:Execute();]]--
+
+    net.Start("UpdateLeaderboard")
+        net.WriteTable(cwDueling.LeaderboardTable)
+        net.Broadcast()
 end
 
 function ENT:Initialize()
@@ -119,7 +125,10 @@ function ENT:Initialize()
             physicsObject:EnableMotion(false)
         end
 
-        UpdateLeaderboard()
+        --UpdateLeaderboard()
+        net.Start("UpdateLeaderboard")
+            net.WriteTable(cwDueling.LeaderboardTable)
+            net.Broadcast()
     end
 
 end
@@ -143,16 +152,25 @@ local function canEditVariable(self, ent, ply, key, val, editor)
 end
 
 
-timer.Create("LeaderboardUpdateTimer", 30, 0, function()
-    UpdateLeaderboard()
+timer.Create("LeaderboardUpdateTimer", 45, 0, function()
+    --UpdateLeaderboard()
+    net.Start("UpdateLeaderboard")
+        net.WriteTable(cwDueling.LeaderboardTable)
+        net.Broadcast()
 end)
 
 hook.Add("PlayerCharacterLoaded", "InitialLeaderboardUpdate", function(ply)
-    UpdateLeaderboard() 
+    --UpdateLeaderboard() 
+    net.Start("UpdateLeaderboard")
+        net.WriteTable(cwDueling.LeaderboardTable)
+        net.Broadcast()
 end)
 
 hook.Add("OnReloaded", "RefreshLeaderboard", function(ply)
     timer.Simple(1, function()
-        UpdateLeaderboard() 
+        --UpdateLeaderboard() 
+        net.Start("UpdateLeaderboard")
+            net.WriteTable(cwDueling.LeaderboardTable)
+            net.Broadcast()
     end)
 end)

@@ -11,7 +11,7 @@ ENT.BodyFont = "Civ5ToolTip2"
 
 ENT.LeaderboardData = {{}, {}, {}, {}, {}, {}} -- might not need this
 Leaderboard = Leaderboard or {}
-Leaderboard.Data = {{}, {}, {}, {}, {}}
+Leaderboard.Data = {{}, {}, {}, {}, {}, {}, {}, {}}
 
 local titleColor = Color(255,144,0)
 
@@ -125,7 +125,7 @@ function ENT:Draw()
         elseif self.LeaderboardType == "total" then
             draw.DrawText("Total:", self.HeaderFont, textX, barHeight + self.BodyMargin - 13, titleColor, TEXT_ALIGN_LEFT)
             draw.DrawText("Win", self.HeaderFont, textX + winsSpace, barHeight + self.BodyMargin - 13, titleColor, TEXT_ALIGN_LEFT)
-            DrawLeaderboard(self, Leaderboard.Data[7], textX, barHeight, maxNameWidth, winsSpace)
+            DrawLeaderboard(self, Leaderboard.Data[9], textX, barHeight, maxNameWidth, winsSpace)
         end 
 
     cam.End3D2D()

@@ -27,13 +27,6 @@ function cwDueling:ClockworkInitPostEntity()
 			leadEnt:Spawn();
 		end
 
-		for k, v in pairs(DUELING_CHANGELISTS) do -- leaderboards
-			local leadEnt = ents.Create("cw_changelist");
-			
-			leadEnt:SetPos(DUELING_CHANGELISTS[k]["spawnPosition"]);
-			leadEnt:SetAngles(DUELING_CHANGELISTS[k]["spawnAngles"]);
-			leadEnt:Spawn();
-		end
 	end;
 end
 

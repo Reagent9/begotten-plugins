@@ -19,9 +19,9 @@ local CTFPlayersMin = 4;
 local CTFtimerStarted = false
 local CTFQueueTime = 30;
 
-cwDueling.firearmsAllowed = false;
-cwDueling.thrallmodeEnabled = false;
-cwDueling.CTFmodeEnabled = false;
+cwDueling.firearmsAllowed = true;
+cwDueling.thrallmodeEnabled = true;
+cwDueling.CTFmodeEnabled = true;
 cwDueling.FFAmodeEnabled = true;
 cwDueling.gamemodes = {"1v1", "2v2", "3v3", "4v4", "5v5", "FFA", "Thralls", "CTF"};
 local map = game.GetMap();
@@ -183,39 +183,24 @@ if map == "rp_begotten3" then
 
 	if !DUELING_STATUES then
 		DUELING_STATUES = {
-			["castle"] = {
-				["spawnPosition"] = Vector(-14081.3125, -12238.5, -1694.34375),
-				["spawnAngles"] = Angle(0, -90, 0),
+			["forge1"] = {
+				["spawnPosition"] = Vector(-83, 13556, -1081),
+				["spawnAngles"] = Angle(0, 0, 0),
 			},
-			["cave"] = {
-				--["spawnPosition"] = Vector(14538.401367, -12252.043945, -1216.099365),
-				--["spawnAngles"] = Angle(0, 82.5, 0),
-				["spawnPosition"] = Vector(14357.21875, -11696.84375, -981.03125),
-				["spawnAngles"] = Angle(0, 173, 0),
-			},
-			["gore"] = {
-				["spawnPosition"] = Vector(387.795929, -5903.227051, 11575.831055),
-				["spawnAngles"] = Angle(0, 100, 0),
-			},
-			["hell"] = {
-				["spawnPosition"] = Vector(-2232.943115, -9138.589844, -6809.481934),
-				["spawnAngles"] = Angle(0, -90, 0),
-			},
-			["tower"] = {
-				["spawnPosition"] = Vector(-1489.162354, 14228.241211, -506.353607),
-				["spawnAngles"] = Angle(0, 180, 0),
+			["forge2"] = {
+				["spawnPosition"] = Vector(183, 13556, -1081),
+				["spawnAngles"] = Angle(0, 0, 0),
 			},
 		};
 	end
 
 	if !DUELING_LEADERBOARDS then
 		DUELING_LEADERBOARDS = {
-		};
-	end
-
-	if !DUELING_CHANGELISTS then
-		DUELING_CHANGELISTS = {
-		};
+			--[[[1] = {
+				["spawnPosition"] = Vector( -469, 13642, -944),
+				["spawnAngles"] = Angle(0, 0, 0),
+				["leaderboardType"] = "12v"
+			}]]--
 	end
 
 end
@@ -290,6 +275,112 @@ function cwDueling:Think()
 		self.ThrallLobbyCheckCooldown = curTime + 1;
 		self:ThrallCheck();
 	end
+end
+
+--Update leaderboard stuff
+if not cwDueling.LeaderboardTable then
+	cwDueling.LeaderboardTable = {}
+end
+
+if not timer.Exists("LeaderboardUpdate") then	
+	timer.Create("LeaderboardUpdate", 5, 0, function()
+		UpdateLeaderboardTable();
+	end)
+end
+
+
+
+function UpdateLeaderboardTable()
+    local charactersTable = Clockwork.config:Get("mysql_characters_table"):Get()
+    local query = Clockwork.database:Select(charactersTable);
+    query:Select("_Data");
+    query:Select("_Name");
+
+    query:Callback(function(result)
+        if result and #result > 0 then
+            local leaderboard = {}
+            local onlinePlayers = _player.GetAll()
+
+            -- Iterate through all characters
+            for _, characterData in pairs(result) do
+                local name = characterData._Name
+                local data = util.JSONToTable(characterData._Data)
+                local duelWins = data.DuelWins;
+
+                if type(duelWins) == "table" then
+                    for _, onlinePlayer in pairs(_player.GetAll()) do
+                        if onlinePlayer:GetName() == name then
+                            -- If the player is online, get the data directly
+                            duelWins = onlinePlayer:GetCharacterData("DuelWins") or {0, 0, 0, 0, 0, 0, 0, 0}
+                            break
+                        end
+                    end
+
+                    -- Iterate through duel types
+                    for duelType, wins in pairs(duelWins) do
+                        -- Insert the player and their wins for the specific duel type
+                        table.insert(leaderboard, { player = name, duelType = duelType, wins = wins })
+                    end
+                end
+            end
+
+            -- Sort the leaderboard by wins in descending order for each duel type
+			cwDueling.LeaderboardTable = {}
+            for duelType = 1, 8 do
+                local typeLeaderboard = {}
+                for _, entry in pairs(leaderboard) do
+                    if entry.duelType == duelType then
+                        table.insert(typeLeaderboard, entry)
+                    end
+                end
+
+                table.sort(typeLeaderboard, function(a, b)
+                    return a.wins > b.wins
+                end)
+
+                -- Update the leaderboard data for the specific duel type
+                local maxEntries = 8
+                local limitedLeaderboard = {}
+                for i = 1, math.min(#typeLeaderboard, maxEntries) do
+                    table.insert(limitedLeaderboard, typeLeaderboard[i])
+                end
+                cwDueling.LeaderboardTable[duelType] = table.Copy(limitedLeaderboard)
+            end
+
+            -- Collect total wins from all players
+            local totalLeaderboard = {}
+
+            for q, e in ipairs(leaderboard) do
+                if not totalLeaderboard[e.player] then
+                    totalLeaderboard[e.player] = {wins = 0, player = e.player}
+                end
+				if q ~= 7 then
+                	totalLeaderboard[e.player].wins = totalLeaderboard[e.player].wins + e.wins
+				end
+            end
+
+            local sortedPlayers = {}
+            for _, playerData in pairs(totalLeaderboard) do
+                table.insert(sortedPlayers, playerData)
+            end
+
+            -- Sort the list based on wins in descending order
+            table.sort(sortedPlayers, function(a, b)
+                return a.wins > b.wins
+            end)
+
+            -- Get the top 5 players
+            local top5Players = {}
+            for i = 1, math.min(8, #sortedPlayers) do
+                table.insert(top5Players, sortedPlayers[i])
+            end
+
+            cwDueling.LeaderboardTable[9] = top5Players -- in the future [6] will be ffa.. need more detailed way of storing this, documentation etc
+			--PrintTable(cwDueling.LeaderboardTable)
+        end
+    end)
+
+    query:Execute()
 end
 
 -- Check if a list of teamPlayers is valid/alive for a duel, else kick them out of matchmaking
@@ -2298,6 +2389,7 @@ function cwDueling:UpdateCharThrallProg(char, arenaID)
 	if duelType then
 		if wins[7] < cwDueling.THRALL_ARENAS[arenaID].wave then
 			wins[7] = cwDueling.THRALL_ARENAS[arenaID].wave
+			print("YO")
 			char:SetCharacterData("DuelWins", wins);
 		end
 	end
@@ -2309,8 +2401,10 @@ function cwDueling:UpdateCharWins(char, duelType)
 		wins = {0, 0, 0, 0, 0, 0, 0, 0};
 	end
 
-	for i = 1, 8 - #wins do
-		table.insert(wins, 0);
+	if #wins < 8 then
+		for i = 1, 8 - #wins do
+			table.insert(wins, 0);
+		end
 	end
 
 	if duelType then
@@ -2326,8 +2420,10 @@ function cwDueling:UpdateCharLosses(char, duelType)
 		losses = {0, 0, 0, 0, 0, 0, 0, 0};
 	end
 
-	for i = 1, 8 - #losses do
-		table.insert(losses, 0);
+	if #losses < 8 then
+		for i = 1, 8 - #losses do
+			table.insert(losses, 0);
+		end
 	end
 
 	if duelType then
@@ -2458,8 +2554,7 @@ function cwDueling:FFACompleted(winner, losers)
 		for i = 1, #winner do
 			cwDueling:UpdateCharWins(winner.players[1], 6)
 		end
-		
-		PrintTable(losers)
+
 		for i = 1, #losers do
 			cwDueling:UpdateCharLosses(losers[i].players[1], 6)
 		end

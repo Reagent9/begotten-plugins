@@ -226,11 +226,14 @@ function COMMAND:OnRun(player, arguments)
     if type(wins) == "table" then
         local message = "Duel Wins: ";
         for i, winCount in ipairs(wins) do
-			local loseCount = losses[i]
+
+			local loseCount = losses[i] or 0
             if i == 6 then
                 message = message .. string.format("[FFA: %d / %d] ", winCount, loseCount);
             elseif i == 7 then
-                message = message .. string.format("[Thralls Longest Wave: %d] ", winCount);
+                message = message .. string.format("[Thralls Wave: %d] ", winCount);
+            elseif i == 8 then
+                message = message .. string.format("[CTF: %d / %d] ", winCount, loseCount);
             else
                 message = message .. string.format("[%dv%d: %d / %d] ", i, i, winCount, loseCount);
             end
@@ -245,79 +248,39 @@ end
 -- Register the command
 COMMAND:Register();
 
---[[
+
 -- view duel leaderboard
 local COMMAND = Clockwork.command:New("DuelLeaderboard");
 COMMAND.tip = "Check the top 5 duel wins for each category.";
 --COMMAND.access = "s";
 
 function COMMAND:OnRun(player, arguments)
-    local charactersTable = Clockwork.config:Get("mysql_characters_table"):Get()
-
-    local query = Clockwork.database:Select(charactersTable);
-    query:Select("_Data");
-    query:Select("_Name");
-
-    query:Callback(function(result)
-        if result and #result > 0 then
-            local leaderboard = {}
-
-            local onlinePlayers = _player.GetAll()
-
-            -- Iterate through all characters
-            for _, characterData in pairs(result) do
-				local name = characterData._Name
-				local data = util.JSONToTable(characterData._Data)
-				local duelWins = data.DuelWins;
-			
-				if type(duelWins) == "table" then
-					-- Check if the player is online
-					for _, onlinePlayer in pairs(_player.GetAll()) do
-						if onlinePlayer:GetName() == name then
-							-- If the player is online, get the data directly
-							duelWins = onlinePlayer:GetCharacterData("DuelWins") or {0, 0, 0, 0, 0}
-							break
-						end
-					end
-			
-					-- Iterate through duel types
-					for duelType, wins in pairs(duelWins) do
-						-- Insert the player and their wins for the specific duel type
-						table.insert(leaderboard, { player = name, duelType = duelType, wins = wins })
-					end
-				end
-			end
-			
-			
-
-            -- Sort the leaderboard by wins in descending order for each duel type
-            for duelType = 1, 5 do
-                local typeLeaderboard = {}
-                for _, entry in pairs(leaderboard) do
-                    if entry.duelType == duelType then
-                        table.insert(typeLeaderboard, entry)
-                    end
-                end
-
-                table.sort(typeLeaderboard, function(a, b)
-                    return a.wins > b.wins
-                end)
-
-                -- Display the top 5 players for each duel type
-                Clockwork.player:Notify(player, "Top 5 Players for " .. duelType .. "v" .. duelType .. ":")
-                for i = 1, math.min(5, #typeLeaderboard) do
-                    Clockwork.player:Notify(player, i .. ". " .. typeLeaderboard[i].player .. " - Wins: " .. typeLeaderboard[i].wins)
-                end
+    if cwDueling.LeaderboardTable then
+        for duelType,v in pairs(cwDueling.LeaderboardTable) do
+            local str = ""
+            if duelType >= 0 and duelType <= 5 then
+                str = str .. duelType .. "v" .. duelType .. ":";
+            elseif duelType == 6 then
+                str = "FFA:"; 
+            elseif duelType == 7 then
+                str = "Thralls (Highest Wave):"; 
+            elseif duelType == 8 then
+                str = "CTF:"; 
+            elseif duelType == 8 then
+                str = "Overall:"; 
             end
-        else
-            Clockwork.player:Notify(player, "Could not retrieve duel wins.")
+            Clockwork.player:Notify(player, "Top 5 Players for " .. str)
+            for i = 1, math.min(8, #v) do
+                Clockwork.player:Notify(player, i .. ". " .. v[i].player .. " - Wins: " .. v[i].wins)
+            end
         end
-    end)
+    else
+        Clockwork.player:Notify(player, "Could not retrieve duel wins.")
+    end
 
-    query:Execute();
 end
 
-COMMAND:Register();--]]
+COMMAND:Register();
 
 
 -- Command to create a new duel party
@@ -512,7 +475,7 @@ function COMMAND:OnRun(player, arguments)
 		end
 	else
 		Clockwork.player:Notify(player, "You are in matchmaking or dueling, you cant disband your party!")
-	end
+	end -- woo
 end
 
 COMMAND:Register()
