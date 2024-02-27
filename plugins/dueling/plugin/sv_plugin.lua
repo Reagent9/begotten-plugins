@@ -3,11 +3,14 @@
 --]]
 
 local FFAtimerStarted = false
+local ThralltimerStarted = false
+local CTFtimerStarted = false
+
+-- Editable values --
 local ffaQueueTime = 30;
 local ffaMinPlayers = 3;
 local ffaMaxPlayers = 12;
 
-local ThralltimerStarted = false
 local thrallQueueTime = 30;
 local thrallMinPlayers = 1;
 local thrallMaxPlayers = 4;
@@ -16,12 +19,11 @@ local thrallHealWaveDiv = 3
 
 local CTFPlayersMax = 12;
 local CTFPlayersMin = 4;
-local CTFtimerStarted = false
 local CTFQueueTime = 30;
 
 cwDueling.firearmsAllowed = true;
-cwDueling.thrallmodeEnabled = true;
-cwDueling.CTFmodeEnabled = true;
+cwDueling.thrallmodeEnabled = false;
+cwDueling.CTFmodeEnabled = false;
 cwDueling.FFAmodeEnabled = true;
 cwDueling.gamemodes = {"1v1", "2v2", "3v3", "4v4", "5v5", "FFA", "Thralls", "CTF"};
 local map = game.GetMap();
