@@ -2456,8 +2456,8 @@ function cwDueling:DuelCompleted(winner, loser, duelArena)
 			v.duelingTeam2 = {};
 			v.duelType = nil;
 				
-			if timer.Exists("DuelTimer_"..k) then
-				timer.Remove("DuelTimer_"..k)
+			if timer.Exists("DuelTimer_"..duelArena) then
+				timer.Remove("DuelTimer_"..duelArena)
 			end
 
 			for _, team in ipairs({winner.players, loser.players}) do
